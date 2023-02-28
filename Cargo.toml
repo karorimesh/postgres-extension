@@ -1,0 +1,51 @@
+[package]
+name = "postgres_spice"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["pg13", "client", "v1"]
+# pg11 = ["pgx/pg11", "pgx-tests/pg11" ]
+# pg12 = ["pgx/pg12", "pgx-tests/pg12" ]
+pg13 = ["pgx/pg13", "pgx-tests/pg13" ]
+# pg14 = ["pgx/pg14", "pgx-tests/pg14" ]
+# pg15 = ["pgx/pg15", "pgx-tests/pg15" ]
+pg_test = []
+client = []
+server = []
+v0 = []
+v1 = []
+v1alpha1 = []
+
+[dependencies]
+pgx = "=0.7.1"
+serde_json = "1.0"
+serde = {version = "1.0", features = ["derive"]}
+reqwest = { version = "0.11.14", features = ["json", "blocking"]}
+tokio = {version = "1.25.0", features = ["full"]}
+prost = "0.11.6"
+prost-types = "0.11.6"
+tonic = "0.8.3"
+tower = "0.4.12"
+futures = "0.3"
+
+[dev-dependencies]
+pgx-tests = "=0.7.1"
+
+[profile.dev]
+panic = "unwind"
+lto = "thin"
+
+[profile.release]
+panic = "unwind"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[build-dependencies]
+glob = "0.3.0"
+tonic-build = "0.8.4"
+
