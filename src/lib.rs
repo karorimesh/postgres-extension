@@ -124,7 +124,7 @@ CREATE TABLE test (
 CREATE TRIGGER test_trigger AFTER INSERT ON test FOR EACH ROW EXECUTE PROCEDURE process_trigger();
 INSERT INTO test (title, description, payload) VALUES ('Fox', 'a description', '{"key": "value"}');
 ALTER TABLE test ENABLE ROW LEVEL SECURITY;
-CREATE POLICY viewable_by_id ON test FOR SELECT USING (true);
+CREATE POLICY viewable_by_id ON test FOR SELECT USING ((SELECT has_permission(id)));
 "#,
     name = "create_trigger",
     requires = [ process_trigger, has_permission ]
