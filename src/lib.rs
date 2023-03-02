@@ -114,19 +114,27 @@ fn process_trigger(trigger: &PgTrigger) -> Result<
 
 pgx::extension_sql!(
     r#"
-CREATE TABLE test (
+CREATE TABLE transactions (
     id serial8 NOT NULL PRIMARY KEY,
     title varchar(50),
     description text,
     payload jsonb
 );
 
-CREATE TRIGGER test_trigger AFTER INSERT ON test FOR EACH ROW EXECUTE PROCEDURE process_trigger();
-INSERT INTO test (title, description, payload) VALUES ('Fox', 'a description', '{"key": "value"}');
-ALTER TABLE test ENABLE ROW LEVEL SECURITY;
-CREATE POLICY viewable_by_id ON test FOR SELECT USING ((SELECT has_permission(id)));
+CREATE TRIGGER test_trigger AFTER INSERT ON transactions FOR EACH ROW EXECUTE PROCEDURE process_trigger();
+INSERT INTO transactions (title, description, payload) VALUES ('Fox', 'a description', '{"key": "value"}');
+
+CREATE ROLE readwrite;
+GRANT CONNECT ON DATABASE postgres_spice TO readwrite;
+GRANT USAGE, CREATE ON SCHEMA public TO readwrite;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE transactions TO readwrite;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO readwrite;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES to readwrite;
+
+ALTER TABLE transactions FORCE ROW LEVEL SECURITY;
+CREATE POLICY viewable_by_id ON transactions FOR SELECT USING ((SELECT has_permission(id)));
 "#,
-    name = "create_trigger",
+    name = "initial_setup",
     requires = [ process_trigger, has_permission ]
 );
 
