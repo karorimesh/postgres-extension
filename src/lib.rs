@@ -130,8 +130,10 @@ GRANT USAGE, CREATE ON SCHEMA public TO readwrite;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE transactions TO readwrite;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO readwrite;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES to readwrite;
+CREATE USER mesh WITH PASSWORD 'mesh';
+GRANT readwrite TO mesh;
 
-ALTER TABLE transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY viewable_by_id ON transactions FOR SELECT USING ((SELECT has_permission(id)));
 "#,
     name = "initial_setup",
