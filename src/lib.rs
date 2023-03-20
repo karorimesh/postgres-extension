@@ -1,8 +1,9 @@
 use pgx::prelude::*;
+use std::env;
+use pgx::Uuid;
 
 pgx::pg_module_magic!();
 
-use reqwest::Error;
 
 use tonic::{
     metadata::{MetadataValue},
@@ -25,16 +26,8 @@ pub mod v1 {
 
 #[pg_extern]
 #[tokio::main]
-async fn hello_postgres_spice() -> &'static str {
-    let res = check_permission_request("empty".to_string()).await;
-    info!("We are processing the trigger now {:?}", res.unwrap());
-    "Hello, postgres_spice"
-}
-
-#[pg_extern]
-#[tokio::main]
-async fn has_permission(id: i64) -> bool {
-    let res = check_permission_request(id.to_string()).await.unwrap();
+async fn has_permission(id: Uuid, subject_id: String) -> bool {
+    let res = check_permission_request(id.to_string(), subject_id).await.unwrap();
     info!("We are processing the request now {:?}", res);
     if res == 2 {
         true
@@ -43,20 +36,21 @@ async fn has_permission(id: i64) -> bool {
     }
 }
 
-fn make_request(title: String) -> Result<(),Error> {
-    let request_url = format!("http://localhost:8080/api/hello/{title}");
-    reqwest::blocking::get(&request_url)?;
-    Ok(())
-}
-
-async fn check_permission_request(id: String) -> Result<i32, Box<dyn std::error::Error>> {
+async fn check_permission_request(id: String, subject_id: String) -> Result<i32, Box<dyn std::error::Error>> {
     // Set up the access token for authentication
-    let access_token = "mylocal".to_string();
+
+    //Environment vars
+    let access_token = env::var("KEY").unwrap_or(String::from("somerandomkeyhere"));
+    let service:String = env::var("SERVICE").unwrap_or(String::from("http://[::1]:50051"));
+    let resource = "transaction".to_string();
+    let subject = "user".to_string();
+    let permission = "view".to_string();
+
     let authorization_header = format!("Bearer {}", access_token);
     let authorization_header_value = MetadataValue::try_from(&authorization_header)?;
 
     // Set up the channel and client for the gRPC request
-    let channel = Channel::from_static("http://[::1]:50051").connect().await?;
+    let channel = Channel::from_shared(service).unwrap().connect().await?;
     let mut client = PermissionsServiceClient::with_interceptor(channel, move |mut req: Request<()>| {
         req.metadata_mut().insert("authorization", authorization_header_value.clone());
         Ok(req)
@@ -64,7 +58,7 @@ async fn check_permission_request(id: String) -> Result<i32, Box<dyn std::error:
 
     // Set up the request message and metadata
     let trsn_resource: Option<ObjectReference> = Some(ObjectReference {
-        object_type: "resource/transaction".to_string(),
+        object_type: resource,
         object_id: id,
     });
     let consistency: Option<Consistency> = Some(Consistency {
@@ -72,8 +66,8 @@ async fn check_permission_request(id: String) -> Result<i32, Box<dyn std::error:
     });
     let trsn_subject: Option<SubjectReference> = Some(SubjectReference {
         object: Some(ObjectReference {
-            object_type: "merchant_admin".to_string(),
-            object_id: "adm2".to_string(),
+            object_type: subject,
+            object_id: subject_id,
         }),
         optional_relation: "".to_string(),
     });
@@ -81,7 +75,7 @@ async fn check_permission_request(id: String) -> Result<i32, Box<dyn std::error:
     let request = Request::new(CheckPermissionRequest {
         consistency: consistency,
         resource: trsn_resource,
-        permission: "view".to_string(),
+        permission: permission,
         subject: trsn_subject,
     });
 
@@ -93,64 +87,49 @@ async fn check_permission_request(id: String) -> Result<i32, Box<dyn std::error:
     Ok(data.permissionship)
 }
 
-#[pg_trigger]
-fn process_trigger(trigger: &PgTrigger) -> Result<
-    PgHeapTuple<'_, impl WhoAllocated>,
-    PgHeapTupleError,
-    > {
+// #[pg_trigger]
+// fn process_trigger(trigger: &PgTrigger) -> Result<
+//     PgHeapTuple<'_, impl WhoAllocated>,
+//     PgHeapTupleError,
+//     > {
     
-    let logvar = unsafe {trigger.current()}.expect("Kuna shida kubwa ka inapita hapa");
-    let title_opt = logvar.into_owned().get_by_name("title").unwrap();
-    let title_val = match title_opt {
-        Some(t) => t,
-        None => "Yikes".to_string()
-    };
+//     let logvar = unsafe {trigger.current()}.expect("Kuna shida kubwa ka inapita hapa");
+//     let title_opt = logvar.into_owned().get_by_name("title").unwrap();
+//     let title_val = match title_opt {
+//         Some(t) => t,
+//         None => "Yikes".to_string()
+//     };
 
-    info!("We are processing the trigger now {:?}", title_val);
-    // make_request(title_val);
+//     info!("We are processing the trigger now {:?}", title_val);
+//     // make_request(title_val);
 
-    Ok(unsafe{ trigger.current()}.expect("No current Heap tupple"))
-}
+//     Ok(unsafe{ trigger.current()}.expect("No current Heap tupple"))
+// }
 
-pgx::extension_sql!(
-    r#"
-CREATE TABLE transactions (
-    id serial8 NOT NULL PRIMARY KEY,
-    title varchar(50),
-    description text,
-    payload jsonb
-);
+// pgx::extension_sql!(
+//     r#"
+// CREATE TABLE transactions (
+//     id uuid NOT NULL PRIMARY KEY,
+//     title varchar(50),
+//     description text
+// );
+// CREATE ROLE readwrite;
+// GRANT CONNECT ON DATABASE db_dev TO readwrite;
+// GRANT USAGE, CREATE ON SCHEMA public TO readwrite;
+// GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE transactions TO readwrite;
+// GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO readwrite;
+// ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES to readwrite;
+// CREATE USER mesh WITH PASSWORD 'mesh';
+// GRANT readwrite TO mesh;
 
-CREATE TRIGGER test_trigger AFTER INSERT ON transactions FOR EACH ROW EXECUTE PROCEDURE process_trigger();
-INSERT INTO transactions (title, description, payload) VALUES ('Fox', 'a description', '{"key": "value"}');
+// ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY viewable_by_id ON transactions FOR SELECT USING ((SELECT has_permission(id, (SELECT current_user))));
+// "#,
+//     name = "initial_setup",
+//     requires = [ process_trigger, has_permission ]
+// );
 
-CREATE ROLE readwrite;
-GRANT CONNECT ON DATABASE postgres_spice TO readwrite;
-GRANT USAGE, CREATE ON SCHEMA public TO readwrite;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE transactions TO readwrite;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO readwrite;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES to readwrite;
-CREATE USER mesh WITH PASSWORD 'mesh';
-GRANT readwrite TO mesh;
 
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY viewable_by_id ON transactions FOR SELECT USING ((SELECT has_permission(id)));
-"#,
-    name = "initial_setup",
-    requires = [ process_trigger, has_permission ]
-);
-
-#[cfg(any(test, feature = "pg_test"))]
-#[pg_schema]
-mod tests {
-    use pgx::prelude::*;
-
-    #[pg_test]
-    fn test_hello_postgres_spice() {
-        assert_eq!("Hello, postgres_spice", crate::hello_postgres_spice());
-    }
-
-}
 
 /// This module is required by `cargo pgx test` invocations. 
 /// It must be visible at the root of your extension crate.
