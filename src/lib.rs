@@ -40,8 +40,8 @@ async fn check_permission_request(id: String, subject_id: String) -> Result<i32,
     // Set up the access token for authentication
 
     //Environment vars
-    let access_token = env::var("KEY").unwrap_or(String::from("somerandomkeyhere"));
-    let service:String = env::var("SERVICE").unwrap_or(String::from("http://[::1]:50051"));
+    let access_token = env::var("SPICE_KEY").unwrap_or(String::from("somerandomkeyhere"));
+    let service:String = env::var("SPICE_SERVICE").unwrap_or(String::from("http://spice:50051"));
     let resource = "transaction".to_string();
     let subject = "user".to_string();
     let permission = "view".to_string();

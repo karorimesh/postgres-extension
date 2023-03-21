@@ -1,0 +1,68 @@
+    1  postgres -- help
+    2  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    3  apt-get -y update
+    4  apt-get -y install curl
+    5  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    6  cargo add cargo-pgx
+    7  source "$HOME/.cargo/env"
+    8  cargo add cargo-pgx
+    9  cargo pgx package
+   10  cargo --list
+   11  cargo pgx package
+   12  cargo add cargo-pgx
+   13  cargo pgx --help
+   14  cargo pgx package
+   15  cargo pgx --help
+   16  cargo --list
+   17  cargo build --release --features client v1 pg14 --no-default-features --message-format=json-render-diagnostics
+   18  cargo build --release --features "client v1 pg14" --no-default-features --message-format=json-render-diagnostics
+   19  apt-get -y install cc
+   20  apt-get -y install build-essential
+   21  cargo build --release --features "client v1 pg14" --no-default-features --message-format=json-render-diagnostics
+   22  apt-get -y install libssl-dev
+   23  cargo build --release --features "client v1 pg14" --no-default-features --message-format=json-render-diagnostics
+   24  clear
+   25  cargo build --release --features "client v1 pg14" --no-default-features --message-format=json-render-diagnostics
+   26  apt-get -y install pkg-config
+   27  cargo build --release --features "client v1 pg14" --no-default-features --message-format=json-render-diagnostics
+   28  ls
+   29  cargo pgx init
+   30  cd /
+   31  ls
+   32  cd root/
+   33  ls
+   34  cd ../workspaces/postgres_spice/
+   35  ls
+   36  cargo build --release --features "client v1 pg14" --no-default-features --message-format=json-render-diagnostics
+   37  cargo add cargo-pgx
+   38* cargo install --locked libreadline-dev
+   39  cargo pgx package
+   40  ls
+   41  cd ..
+   42  cargo pgx init
+   43  apt-get -y install libreadline-dev
+   44  cargo pgx init
+   45  apt-get -y install zlib1g-dev
+   46  cargo pgx init
+   47  cd postgres_spice/
+   48  cargo pgx package
+   49  apt-get -y install libclang-dev
+   50  apt-get -y install libclang-dev
+   51  cargo pgx package
+   52  brew install bufbuild/buf/buf
+   53  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   54  apt-get -y install git
+   55  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   56  (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /root/.profile
+   57  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+   58  brew install gcc
+   59  brew install bufbuild/buf/buf
+   60  cargo install cargo-make
+   61  cargo make build
+   62  cargo make build
+   63  cargo pgx package
+   64  apk add protoc protobuf-dev
+   65  apt-get -y install protobuf-compiler libprotobuf-dev
+   66  cargo make build
+   67  cargo pgx package
+   68  history > commands_reference.txt
