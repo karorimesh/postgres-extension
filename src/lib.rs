@@ -17,7 +17,7 @@ pub mod v1 {
     tonic::include_proto!("authzed.api.v1");
 }
 
-#[pg_extern]
+#[pg_extern(parallel_safe)]
 #[tokio::main]
 async fn has_permission(
     object_type: String,
