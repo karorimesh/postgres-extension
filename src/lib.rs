@@ -1,72 +1,80 @@
 use pgx::prelude::*;
-use std::env;
 use pgx::Uuid;
+use std::env;
 
 pgx::pg_module_magic!();
 
+use tonic::{metadata::MetadataValue, transport::Channel, Request, Response};
 
-use tonic::{
-    metadata::{MetadataValue},
-    transport::Channel,
-    Request,
-    Response
-};
-
-use v1::permissions_service_client::PermissionsServiceClient;
 use v1::consistency::Requirement;
-use v1::{CheckPermissionRequest, CheckPermissionResponse, Consistency, ObjectReference, SubjectReference};
-
+use v1::permissions_service_client::PermissionsServiceClient;
+use v1::{
+    CheckPermissionRequest, CheckPermissionResponse, Consistency, ObjectReference, SubjectReference,
+};
 
 #[cfg(feature = "v1")]
 pub mod v1 {
     tonic::include_proto!("authzed.api.v1");
 }
 
-
-
-#[pg_extern]
+#[pg_extern(parallel_safe)]
 #[tokio::main]
-async fn has_permission(id: Uuid, subject_id: String) -> bool {
-    let res = check_permission_request(id.to_string(), subject_id).await.unwrap();
+async fn has_permission(
+    object_type: String,
+    object_id: String,
+    subject_type: String,
+    subject_id: String,
+    permission: String,
+) -> bool {
+    let res =
+        check_permission_request(object_type, object_id, subject_type, subject_id, permission)
+            .await
+            .unwrap();
     info!("We are processing the request now {:?}", res);
     if res == 2 {
         true
-    }else {
+    } else {
         false
     }
 }
 
-async fn check_permission_request(id: String, subject_id: String) -> Result<i32, Box<dyn std::error::Error>> {
+async fn check_permission_request(
+    object_type: String,
+    object_id: String,
+    subject_type: String,
+    subject_id: String,
+    permission: String,
+) -> Result<i32, Box<dyn std::error::Error>> {
     // Set up the access token for authentication
 
     //Environment vars
     let access_token = env::var("SPICE_KEY").unwrap_or(String::from("somerandomkeyhere"));
-    let service:String = env::var("SPICE_SERVICE").unwrap_or(String::from("http://spice:50051"));
-    let resource = "transaction".to_string();
-    let subject = "user".to_string();
-    let permission = "view".to_string();
+    let service: String =
+        env::var("SPICE_SERVICE").unwrap_or(String::from("https://167.99.254.180:32310"));
 
     let authorization_header = format!("Bearer {}", access_token);
     let authorization_header_value = MetadataValue::try_from(&authorization_header)?;
 
     // Set up the channel and client for the gRPC request
     let channel = Channel::from_shared(service).unwrap().connect().await?;
-    let mut client = PermissionsServiceClient::with_interceptor(channel, move |mut req: Request<()>| {
-        req.metadata_mut().insert("authorization", authorization_header_value.clone());
-        Ok(req)
-    });
+    let mut client =
+        PermissionsServiceClient::with_interceptor(channel, move |mut req: Request<()>| {
+            req.metadata_mut()
+                .insert("authorization", authorization_header_value.clone());
+            Ok(req)
+        });
 
     // Set up the request message and metadata
     let trsn_resource: Option<ObjectReference> = Some(ObjectReference {
-        object_type: resource,
-        object_id: id,
+        object_type: object_type,
+        object_id: object_id,
     });
     let consistency: Option<Consistency> = Some(Consistency {
         requirement: Some(Requirement::FullyConsistent(true)),
     });
     let trsn_subject: Option<SubjectReference> = Some(SubjectReference {
         object: Some(ObjectReference {
-            object_type: subject,
+            object_type: subject_type,
             object_id: subject_id,
         }),
         optional_relation: "".to_string(),
@@ -82,7 +90,6 @@ async fn check_permission_request(id: String, subject_id: String) -> Result<i32,
     // Send the request and process the response
     let response: Response<CheckPermissionResponse> = client.check_permission(request).await?;
     let data = response.into_inner();
-    println!("Response: {:?}", data.permissionship);
 
     Ok(data.permissionship)
 }
@@ -92,7 +99,7 @@ async fn check_permission_request(id: String, subject_id: String) -> Result<i32,
 //     PgHeapTuple<'_, impl WhoAllocated>,
 //     PgHeapTupleError,
 //     > {
-    
+
 //     let logvar = unsafe {trigger.current()}.expect("Kuna shida kubwa ka inapita hapa");
 //     let title_opt = logvar.into_owned().get_by_name("title").unwrap();
 //     let title_val = match title_opt {
@@ -129,9 +136,7 @@ async fn check_permission_request(id: String, subject_id: String) -> Result<i32,
 //     requires = [ process_trigger, has_permission ]
 // );
 
-
-
-/// This module is required by `cargo pgx test` invocations. 
+/// This module is required by `cargo pgx test` invocations.
 /// It must be visible at the root of your extension crate.
 #[cfg(test)]
 pub mod pg_test {

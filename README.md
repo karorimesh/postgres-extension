@@ -15,3 +15,9 @@ cargo make build
 cargo install cargo-pgx
 If your client is pg 13 in cargo.toml file then:
 cargo pgx run pg13
+
+
+#Optionally 
+1. Clone code
+2. Build the docker file
+3. Run using docker
